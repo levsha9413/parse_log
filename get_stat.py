@@ -1,11 +1,9 @@
 import re
 import json
 
+request_pattert = re.compile(r'\"(\w+) ')
+ip_pattern = re.compile(r'^\d+\.\d+\.\d+\.\d+')
 
-get_pattern = re.compile(r'GET')
-post_pattern = re.compile(r'POST')
-put_pattern = re.compile(r'PUT')
-delete_pattern = re.compile(r'DELETE')
 
 def get_string():
     '''
@@ -15,21 +13,33 @@ def get_string():
         for string in logs:
             yield string
 
+
 logs = get_string()
+ip_dict = {}
+request_dict = {}
 
-get_request_count = 0
-post_request_count = 0
-put_request_count = 0
-delete_request_count = 0
+
+def elements_counter(log_string: str, pattern, elements_dict: dict) -> dict:
+    search_result = pattern.search(log_string)
+    if search_result:
+        try:
+            elements_dict[search_result.group(0)] += 1
+        except KeyError:
+            elements_dict[search_result.group(0)] = 1
+    return elements_dict
+
+
+a = 0
 for string in logs:
-    if get_pattern.search(string):
-        get_request_count += 1
-    elif post_pattern.search(string):
-        post_request_count += 1
-    elif put_pattern.search(string):
-        put_request_count += 1
-    elif delete_pattern.search(string):
-        delete_request_count +=1
+    ip_dict = elements_counter(string, ip_pattern, ip_dict)
 
-print(f'GET={get_request_count}\nPOST={post_request_count}\nPUT={put_request_count}\nDELETE={delete_request_count}')
-print(f'Requests count={get_request_count+post_request_count+put_request_count+delete_request_count}')
+    req = request_pattert.search(string)
+    if req:
+        try:
+            request_dict[req.group(1)] += 1
+        except KeyError:
+            request_dict[req.group(1)] = 1
+
+print(len(ip_dict))
+print(ip_dict)
+print(request_dict)
