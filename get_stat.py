@@ -7,38 +7,30 @@ parser = argparse.ArgumentParser(description='Logs parser')
 parser.add_argument('--path', help='Путь к файлу или папке с логами')
 args = parser.parse_args()
 
-request_pattert = re.compile(r'(?<=\")(\w+)(?= )')
+request_pattert = re.compile(r'(?<=\")(\w+)(?= )|POST')
 ip_pattern = re.compile(r'^\d+\.\d+\.\d+\.\d+')
 request_url_pattern = re.compile(r'(?<=\")(.*?)(?=\")')
-time_pattern = re.compile(r'\d+$')
+time_pattern = re.compile(r'(?<= )(\w+)(?=$)')
+
+try:
+    files = os.listdir(args.path)
+except NotADirectoryError:
+    files = [os.path.basename(args.path)]
 
 
-def get_string_some_files():
-    '''
-    возвращает объект генератор для работы с большим файлом логов,
-    при работе с директорией логов
-    '''
-    for file in files:
-        with open(f'{args.path}/{file}', "r") as logs:
-            for string in logs:
-                yield string
-
-
-def get_string_single_files():
+def get_string(file):
     '''
     возвращает объект генератор для работы с большим файлом логов,
     при работе с одним файлом
     '''
-    with open(f'{args.path}', "r") as logs:
-        for string in logs:
-            yield string
-
-
-try:
-    files = os.listdir(args.path)
-    logs = get_string_some_files()
-except NotADirectoryError:
-    logs = get_string_single_files()
+    try:
+        with open(f'{args.path}/{file}', "r") as logs:
+            for string in logs:
+                yield string
+    except NotADirectoryError:
+        with open(f'{args.path}', "r") as logs:
+            for string in logs:
+                yield string
 
 
 def different_elements_counter(log_string: str, pattern, elements_dict: dict) -> dict:
@@ -101,30 +93,36 @@ def get_requests_time(ip_patern, request_url_pattern, time_pattern, log_string, 
     ip = ip_patern.search(log_string)
     request_url = request_url_pattern.search(log_string)
     time = time_pattern.search(log_string)
-    if ip and request_url:
+    if ip and request_url and time:
         ip = ip.group(0)
         request_url = request_url.group(0)
         key = f"{id} {ip} {request_url}"
-        time_dict[key] = time.group(0)
+        time_dict[key] = int(time.group(0))
     return time_dict
 
 
-id = 0
-ip_dict = {}
-request_dict = {}
-time_dict = {}
-for string in logs:
-    ip_dict = different_elements_counter(string, ip_pattern, ip_dict)
-    request_dict = different_elements_counter(string, request_pattert, request_dict)
-    time_dict = get_requests_time(ip_pattern, request_url_pattern, time_pattern, string, time_dict, id)
-    id += 1
+for file in files:
 
-result = {'Общее количество выполненных запросов': elements_counter(request_dict),
-          'Количество запросов по типу': request_dict,
-          'Топ 3 IP адресов, с которых были сделаны запросы': get_top3_elements(ip_dict),
-          'Топ 3 самых долгих запросов': get_top3_elements(time_dict)}
+    logs = get_string(file)
 
-result_json = json.dumps(result, sort_keys=True, indent=4, ensure_ascii=False)
-print(result_json)
-with open('result2.json', 'w') as file:
-    json.dump(result_json, file, ensure_ascii=False, sort_keys=True, indent=4)
+    id = 0
+    ip_dict = {}
+    request_dict = {}
+    time_dict = {}
+    for string in logs:
+        ip_dict = different_elements_counter(string, ip_pattern, ip_dict)
+        request_dict = different_elements_counter(string, request_pattert, request_dict)
+        time_dict = get_requests_time(ip_pattern, request_url_pattern, time_pattern, string, time_dict, id)
+        id += 1
+
+    result = {'Файл логов': file,
+              'Общее количество выполненных запросов': elements_counter(request_dict),
+              'Количество запросов по типу': request_dict,
+              'Топ 3 IP адресов, с которых были сделаны запросы': get_top3_elements(ip_dict),
+              'Топ 3 самых долгих запросов': get_top3_elements(time_dict)
+              }
+
+    result_json = json.dumps(result, sort_keys=False, indent=4, ensure_ascii=False)
+    print(result_json)
+    with open(f'{os.path.splitext(file)[0]}.json', 'w') as file:
+        file.write(result_json)
