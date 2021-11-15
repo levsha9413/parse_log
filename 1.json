@@ -11,8 +11,8 @@
         "109.227.70.248": 1
     },
     "Топ 3 самых долгих запросов": {
-        "0 109.227.70.248 POST /administrator/index.php HTTP/1.1": 10000,
-        "1 31.170.244.195 GET /administrator/ HTTP/1.1": 9832,
-        "2 31.170.244.195 POST /administrator/index.php HTTP/1.1": 8089
+        "0 109.227.70.248 [18/Feb/2016:21:30:58 +0100] POST /administrator/index.php HTTP/1.1": 10000,
+        "1 31.170.244.195 [18/Feb/2016:21:30:58 +0100] GET /administrator/ HTTP/1.1": 9832,
+        "2 31.170.244.195 [18/Feb/2016:21:30:58 +0100] POST /administrator/index.php HTTP/1.1": 8089
     }
 }

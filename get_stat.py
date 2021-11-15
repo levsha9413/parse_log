@@ -7,10 +7,11 @@ parser = argparse.ArgumentParser(description='Logs parser')
 parser.add_argument('--path', help='Путь к файлу или папке с логами')
 args = parser.parse_args()
 
-request_pattert = re.compile(r'(?<=\")(\w+)(?= )|POST')
+request_pattert = re.compile(r'(?<=\")(\w+)(?= )')
 ip_pattern = re.compile(r'^\d+\.\d+\.\d+\.\d+')
 request_url_pattern = re.compile(r'(?<=\")(.*?)(?=\")')
 time_pattern = re.compile(r'(?<= )(\w+)(?=$)')
+date_pattern = re.compile(r'\[.+\]')
 
 try:
     files = os.listdir(args.path)
@@ -20,8 +21,7 @@ except NotADirectoryError:
 
 def get_string(file):
     '''
-    возвращает объект генератор для работы с большим файлом логов,
-    при работе с одним файлом
+    возвращает объект генератор для работы с большим файлом логов
     '''
     try:
         with open(f'{args.path}/{file}', "r") as logs:
@@ -48,6 +48,13 @@ def different_elements_counter(log_string: str, pattern, elements_dict: dict) ->
             elements_dict[search_result.group(0)] += 1
         except KeyError:
             elements_dict[search_result.group(0)] = 1
+    else:
+        search_result = ip_pattern.search(log_string)
+        if search_result:
+            try:
+                elements_dict["NO_VALID"] += 1
+            except KeyError:
+                elements_dict["NO_VALID"] = 1
     return elements_dict
 
 
@@ -92,11 +99,13 @@ def get_requests_time(ip_patern, request_url_pattern, time_pattern, log_string, 
     '''
     ip = ip_patern.search(log_string)
     request_url = request_url_pattern.search(log_string)
+    date = date_pattern.search(log_string)
     time = time_pattern.search(log_string)
     if ip and request_url and time:
         ip = ip.group(0)
         request_url = request_url.group(0)
-        key = f"{id} {ip} {request_url}"
+        date = date.group(0)
+        key = f"{id} {ip} {date} {request_url}"
         time_dict[key] = int(time.group(0))
     return time_dict
 
